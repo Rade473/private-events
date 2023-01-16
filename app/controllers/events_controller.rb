@@ -1,9 +1,21 @@
 class EventsController < ApplicationController
-  before_action :set_event, only: %i[ show edit update destroy ]
+  before_action :set_event, only: %i[ show edit update destroy attend]
+  before_action :authenticate_user!, except: %i[show index]
+  before_action :owner?, except: %i[show index new create attend]
 
   # GET /events or /events.json
   def index
     @events = Event.all
+  end
+
+  def attend
+    @event = Event.find(params[:id])
+    if @event.attendees.include?(current_user)
+      redirect_to @event, notice: "You are already on the list"
+    else
+      @event.attendees << current_user
+      redirect_to @event
+    end
   end
 
   # GET /events/1 or /events/1.json
@@ -22,7 +34,8 @@ class EventsController < ApplicationController
   # POST /events or /events.json
   def create
     @event = Event.new(event_params)
-
+    @event.creator = current_user
+    
     respond_to do |format|
       if @event.save
         format.html { redirect_to event_url(@event), notice: "Event was successfully created." }
@@ -57,6 +70,8 @@ class EventsController < ApplicationController
     end
   end
 
+
+
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_event
@@ -66,5 +81,9 @@ class EventsController < ApplicationController
     # Only allow a list of trusted parameters through.
     def event_params
       params.require(:event).permit(:place, :date)
+    end
+
+    def owner?
+     raise 'Not allowed' unless current_user == @event.creator
     end
 end
